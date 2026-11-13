@@ -1,0 +1,52 @@
+# yatr - https://github.com/cargopete/yatr
+#
+# OCaml commands go through `opam exec` so the local switch in _opam/ is used
+# without `eval $(opam env)`.
+
+[settings]
+cache = true
+
+# Not cached: these install into _opam/, which is gitignored and huge.
+[tasks.switch]
+desc = "Create the local opam switch (first time only; then yatr deps)"
+run = ["opam switch create . ocaml-base-compiler.5.2.0 --no-install --yes"]
+no_cache = true
+
+[tasks.deps]
+desc = "Install dependencies into the current switch"
+run = ["opam install . --deps-only --with-test --yes"]
+no_cache = true
+
+[tasks.build]
+desc = "Build the library and the starling binary"
+run = ["opam exec -- dune build"]
+sources = ["lib/**", "bin/**", "test/**", "dune-project", "starling.opam"]
+
+[tasks.test]
+desc = "The alcotest/qcheck suites"
+run = ["opam exec -- dune runtest"]
+sources = ["lib/**", "test/**", "dune-project", "starling.opam"]
+
+[tasks.interop-build]
+desc = "Build the go-libp2p interop node"
+cwd = "interop"
+run = ["go build ."]
+sources = ["*.go", "go.mod", "go.sum"]
+outputs = ["starling-interop"]
+
+[tasks.listen]
+desc = "Run a starling node on :4001"
+foreground = true
+run = ["opam exec -- dune exec starling -- listen 4001"]
+
+[tasks.interop-listen]
+desc = "Run the go-libp2p node on :4101 for starling to dial"
+depends = ["interop-build"]
+cwd = "interop"
+foreground = true
+run = ["./starling-interop listen 4101"]
+
+[tasks.ci]
+desc = "build, test"
+depends = ["build", "test"]
+run = []
